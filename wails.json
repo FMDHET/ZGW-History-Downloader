@@ -1,0 +1,13 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "zgwhistory",
+  "outputfilename": "zgwhistory",
+  "frontend:install": "npm install",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
+  "frontend:dev:serverUrl": "auto",
+  "author": {
+    "name": "FMDHET",
+    "email": "101962988+FMDHET@users.noreply.github.com"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:community.home-assistant.io)",
+      "Bash(grep -n \"^  /\\\\|^    get:\\\\|^    post:\\\\|^      summary:\\\\|^      operationId:\" zgw16ip/ELTAKO-ZGW16-IP-OpenAPI.yaml)",
+      "PowerShell(foreach \\($c in 'dotnet','python','py','go','node','npm','pyinstaller'\\) { $g = Get-Command $c -ErrorAction SilentlyContinue; if \\($g\\) { \"$c -> $\\($g.Source\\)\" } else { \"$c -> NOT FOUND\" } }; \"--- dotnet SDKs ---\"; try { dotnet --list-sdks } catch { \"n/a\" }; \"--- python ver ---\"; try { python --version } catch { \"n/a\" })",
+      "PowerShell(& go version)",
+      "PowerShell(& py -m pip --version)",
+      "PowerShell(\"--- node/npm ---\"; node --version; npm --version; \"--- GOPATH bin ---\"; go env GOPATH; \"--- wails cli? ---\"; $w = Get-Command wails -ErrorAction SilentlyContinue; if \\($w\\) { wails version } else { \"wails CLI not installed\" }; \"--- WebView2 runtime installed? ---\"; $p='HKLM:\\\\SOFTWARE\\\\WOW6432Node\\\\Microsoft\\\\EdgeUpdate\\\\Clients\\\\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'; if \\(Test-Path $p\\) { \\(Get-ItemProperty $p\\).pv } else { \"not found in registry \\(may still be present\\)\" })",
+      "PowerShell($env:GOPROXY='https://proxy.golang.org,direct'; & go install github.com/wailsapp/wails/v2/cmd/wails@latest; \"exit=$LASTEXITCODE\"; & \"$\\(go env GOPATH\\)\\\\bin\\\\wails.exe\" version)",
+      "PowerShell(& git init 2>&1; \"--- wails init help ---\"; & \"$\\(go env GOPATH\\)\\\\bin\\\\wails.exe\" init --help 2>&1 | Select-Object -First 30)",
+      "PowerShell(& \"$\\(go env GOPATH\\)\\\\bin\\\\wails.exe\" init -n zgwhistory -t vanilla -d . -ci 2>&1 | Select-Object -Last 20; \"exit=$LASTEXITCODE\"; \"--- Inhalt ---\"; Get-ChildItem -Force | Select-Object Name)"
+    ]
+  }
+}
