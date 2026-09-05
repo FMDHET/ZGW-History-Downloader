@@ -65,6 +65,11 @@ button:disabled { opacity: 0.5; cursor: default; }
 .state { color: var(--muted); }
 .state.error { color: var(--error); }
 .state.ok { color: #1c6b32; }
+.state.small { font-size: 13px; }
+
+/* Adressfeld und Suchknopf teilen sich eine Zeile im Raster. */
+.host-row { display: flex; gap: 8px; }
+.host-row input { flex: 1; }
 
 .meter { border: 1px solid var(--line); border-radius: 6px; margin-bottom: 8px; }
 .meter > summary { padding: 8px 10px; cursor: pointer; font-weight: 600; }

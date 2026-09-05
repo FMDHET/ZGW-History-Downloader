@@ -1,6 +1,7 @@
 import {
   LoadSettings,
   Connect,
+  Discover,
   ChooseFolder,
   StartExport,
   CancelExport,
@@ -8,6 +9,10 @@ import {
 import { EventsOn } from "../wailsjs/runtime/runtime";
 
 const $ = (id) => document.getElementById(id);
+
+// Vorgabeadresse. Nur wenn genau die im Feld steht, darf ein Fund sie
+// überschreiben — eine selbst eingetragene Adresse bleibt unangetastet.
+const DEFAULT_HOST = "zgw16-ip.local";
 
 // Beschriftung der vier Zeitstufen, die die API kennt.
 const TIMEFRAMES = [
@@ -152,6 +157,55 @@ async function connect() {
   }
 }
 
+function setSearchState(text, kind = "") {
+  const el = $("search-state");
+  el.textContent = text;
+  el.className = "state small " + kind;
+}
+
+// search sucht per mDNS nach Gateways und füllt die Auswahlliste.
+// Bei genau einem Fund wird die Adresse eingetragen, sonst bleibt die
+// Wahl beim Benutzer.
+async function search() {
+  $("search").disabled = true;
+  setSearchState("Suche im Netz …");
+  try {
+    const found = (await Discover()) || [];
+    const list = $("gateways");
+    list.innerHTML = "";
+    for (const g of found) {
+      const opt = document.createElement("option");
+      // Ausgewählt wird die IP; die Beschriftung nennt zusätzlich
+      // mDNS-Namen und Gerätenamen.
+      opt.value = g.ip;
+      const rest = [g.host, g.name || g.model].filter(Boolean).join(" - ");
+      if (rest) opt.label = rest;
+      list.appendChild(opt);
+    }
+
+    if (found.length === 0) {
+      setSearchState("Kein Gateway gefunden. Adresse bitte von Hand eintragen.");
+      return;
+    }
+
+    const current = $("host").value.trim();
+    if (found.length === 1) {
+      if (current === "" || current === DEFAULT_HOST) {
+        $("host").value = found[0].ip;
+        setSearchState(`Gefunden: ${found[0].host || found[0].ip}`, "ok");
+      } else {
+        setSearchState(`1 Gateway gefunden (${found[0].ip}), Auswahl über das Feld`, "ok");
+      }
+      return;
+    }
+    setSearchState(`${found.length} Gateways gefunden — bitte im Feld auswählen`, "ok");
+  } catch (err) {
+    setSearchState(String(err), "error");
+  } finally {
+    $("search").disabled = false;
+  }
+}
+
 async function browse() {
   try {
     const dir = await ChooseFolder();
@@ -197,6 +251,7 @@ EventsOn("export:done", (s) => {
 });
 
 $("connect").addEventListener("click", connect);
+$("search").addEventListener("click", search);
 $("browse").addEventListener("click", browse);
 $("download").addEventListener("click", download);
 $("password").addEventListener("keydown", (e) => {
@@ -204,9 +259,12 @@ $("password").addEventListener("keydown", (e) => {
 });
 
 LoadSettings().then((s) => {
-  $("host").value = s.host || "zgw16-ip.local";
+  $("host").value = s.host || DEFAULT_HOST;
   $("password").value = s.password || "";
   $("remember").checked = !!s.remember;
   $("outdir").value = s.outputDir || "";
   renderTimeframes([1]);
+  // Beim Start im Hintergrund suchen, damit im Normalfall nichts
+  // eingetippt werden muss.
+  search();
 });

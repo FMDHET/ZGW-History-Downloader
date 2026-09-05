@@ -12,7 +12,19 @@
         <h2>1 · Verbindung</h2>
         <div class="grid">
           <label for="host">Adresse des Gateways</label>
-          <input id="host" type="text" placeholder="zgw16-ip.local" />
+          <div class="host-row">
+            <input
+              id="host"
+              type="text"
+              list="gateways"
+              placeholder="zgw16-ip.local"
+              autocomplete="off"
+            />
+            <datalist id="gateways"></datalist>
+            <button id="search" title="Im Netz nach Gateways suchen">Suchen</button>
+          </div>
+          <span></span>
+          <span id="search-state" class="state small"></span>
           <label for="password">Passwort</label>
           <input id="password" type="password" />
           <span></span>

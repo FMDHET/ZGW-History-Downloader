@@ -14,6 +14,10 @@ export function Connect(arg1, arg2, arg3) {
   return window['go']['main']['App']['Connect'](arg1, arg2, arg3);
 }
 
+export function Discover() {
+  return window['go']['main']['App']['Discover']();
+}
+
 export function LoadSettings() {
   return window['go']['main']['App']['LoadSettings']();
 }

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"zgwhistory/internal/config"
+	"zgwhistory/internal/discover"
 	"zgwhistory/internal/export"
 	"zgwhistory/internal/zgw"
 
@@ -97,6 +98,13 @@ func (a *App) LoadSettings() Settings {
 		}
 	}
 	return s
+}
+
+// Discover sucht Gateways im lokalen Netz per mDNS. Findet die Suche
+// nichts, ist die Liste leer -- das ist kein Fehler, sondern der
+// Normalfall in Netzen, die Multicast filtern.
+func (a *App) Discover() ([]discover.Gateway, error) {
+	return discover.Find(a.ctx)
 }
 
 // Connect meldet sich am Gateway an und laedt Zaehler und Register.

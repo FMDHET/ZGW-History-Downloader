@@ -1,3 +1,28 @@
+export namespace discover {
+	
+	export class Gateway {
+	    ip: string;
+	    host: string;
+	    name: string;
+	    model: string;
+	    serial: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Gateway(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ip = source["ip"];
+	        this.host = source["host"];
+	        this.name = source["name"];
+	        this.model = source["model"];
+	        this.serial = source["serial"];
+	    }
+	}
+
+}
+
 export namespace main {
 	
 	export class ConnectResult {
