@@ -24,6 +24,34 @@ func TestNewPointRejectsUnparsableTimestamp(t *testing.T) {
 	}
 }
 
+// Das Geraet schreibt den Zonenversatz ohne Doppelpunkt ("+0200") und
+// laesst die Sekundenbruchteile weg. Die Spezifikation zeigt dagegen
+// "+02:00" mit Millisekunden. Beide Formen muessen gelesen werden.
+func TestNewPointAcceptsBothOffsetForms(t *testing.T) {
+	cases := []struct {
+		iso  string
+		want string
+	}{
+		{"2026-09-04T08:32:00+0200", "04.09.2026 08:32:00"},         // echtes Geraet
+		{"2026-09-05T08:15:00.000+02:00", "05.09.2026 08:15:00"},    // Spezifikation
+		{"2026-09-04T08:32:00.743+0200", "04.09.2026 08:32:00"},     // beides gemischt
+		{"2026-01-15T23:45:00Z", "15.01.2026 23:45:00"},             // UTC-Kuerzel
+	}
+	for _, c := range cases {
+		p, err := NewPoint(c.iso, 1)
+		if err != nil {
+			t.Errorf("NewPoint(%q): %v", c.iso, err)
+			continue
+		}
+		if got := p.Time.Format(germanTimeLayout); got != c.want {
+			t.Errorf("NewPoint(%q) ergab %q, erwartet %q", c.iso, got, c.want)
+		}
+		if p.Raw != c.iso {
+			t.Errorf("Raw = %q, erwartet die unveraenderte Eingabe %q", p.Raw, c.iso)
+		}
+	}
+}
+
 func TestWriteGermanExcelDialect(t *testing.T) {
 	var buf bytes.Buffer
 	err := Write(&buf, []Series{{

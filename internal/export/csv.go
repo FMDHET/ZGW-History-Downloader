@@ -27,15 +27,30 @@ type Point struct {
 	Value float64
 }
 
-// NewPoint liest einen Zeitstempel im Format der API, zum Beispiel
-// "2026-09-05T08:15:00.000+02:00". Der Zonenversatz bleibt erhalten;
-// es wird nicht in Ortszeit oder UTC umgerechnet.
+// timeLayouts sind die Schreibweisen, in denen das Geraet Zeitstempel
+// liefert.
+//
+// Firmware 3.0.99 schreibt den Zonenversatz ohne Doppelpunkt
+// ("2026-09-04T08:32:00+0200"), die Spezifikation zeigt ihn mit
+// ("2026-09-05T08:15:00.000+02:00"). Go akzeptiert beim Parsen
+// Sekundenbruchteile auch dann, wenn das Layout keine nennt; die beiden
+// Eintraege decken deshalb alle vier Kombinationen ab.
+var timeLayouts = []string{
+	"2006-01-02T15:04:05Z0700",
+	time.RFC3339,
+}
+
+// NewPoint liest einen Zeitstempel der API. Der Zonenversatz bleibt
+// erhalten; es wird nicht in Ortszeit oder UTC umgerechnet.
 func NewPoint(iso string, value float64) (Point, error) {
-	t, err := time.Parse(time.RFC3339, iso)
-	if err != nil {
-		return Point{}, err
+	var err error
+	for _, layout := range timeLayouts {
+		var t time.Time
+		if t, err = time.Parse(layout, iso); err == nil {
+			return Point{Time: t, Raw: iso, Value: value}, nil
+		}
 	}
-	return Point{Time: t, Raw: iso, Value: value}, nil
+	return Point{}, err
 }
 
 // Series ist eine Messreihe, also eine Spalte der spaeteren Tabelle.

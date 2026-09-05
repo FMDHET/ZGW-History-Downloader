@@ -65,6 +65,31 @@ Tests:
 
     go test ./...
 
+Zusätzlich gibt es einen Test gegen echte Hardware. Ohne die beiden
+Umgebungsvariablen wird er übersprungen:
+
+    ZGW_HOST=192.168.1.50 ZGW_PASSWORD=geheim go test . -run Echtes -v
+
+Er meldet sich an, liest Zähler und Register, exportiert alle vier
+Zeitstufen und prüft, dass die Dateien echte Werte enthalten. Mit
+`ZGW_OUT=C:\irgendwo` bleiben die erzeugten CSV-Dateien zum Ansehen
+liegen.
+
+## Geprüft gegen
+
+Ein ZGW16WL-IP mit Firmware **3.0.99-rc.1**, drei Zählern (DSZ16DZ(E),
+DSZ15DZMOD, DSZ16WDZ(E)) und 20 aufgezeichneten Registern: 80 Abrufe,
+10 Dateien, keine Fehler.
+
+Die Firmware weicht an zwei Stellen von der Spezifikation 2.4.1 ab —
+die Anmeldung antwortet verschachtelt, und Zeitstempel tragen den
+Zonenversatz ohne Doppelpunkt (`+0200` statt `+02:00`). Das Programm
+liest beide Formen. Einzelheiten in
+[`docs/superpowers/specs/`](docs/superpowers/specs/).
+
+Registerbeschreibungen liefert die Firmware nur auf Englisch, deshalb
+lauten die Spaltenüberschriften etwa `Total active power [Watt]`.
+
 ## Aufbau
 
 | Pfad | Zweck |

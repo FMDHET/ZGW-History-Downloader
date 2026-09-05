@@ -31,7 +31,7 @@ func loginHandler(t *testing.T, want string) http.HandlerFunc {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		io.WriteString(w, `{"accessToken":"`+testToken+`"}`)
+		io.WriteString(w, `{"login":{"accessToken":"`+testToken+`"}}`)
 	}
 }
 
@@ -50,6 +50,25 @@ func TestLoginStoresToken(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewClient: %v", err)
 	}
+	if err := c.Login(context.Background()); err != nil {
+		t.Fatalf("Login: %v", err)
+	}
+	if c.Token() != testToken {
+		t.Fatalf("Token = %q, erwartet %q", c.Token(), testToken)
+	}
+}
+
+// Die Spezifikation zeigt am Endpunkt eine flache Antwort, im Schema
+// eine verschachtelte. Das Geraet antwortet verschachtelt; die flache
+// Form muss trotzdem gelesen werden, damit ein anderer Firmwarestand
+// das Programm nicht lahmlegt.
+func TestLoginAcceptsFlatTokenResponse(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, `{"accessToken":"`+testToken+`"}`)
+	}))
+	defer srv.Close()
+
+	c, _ := NewClient(srv.URL, "geheim")
 	if err := c.Login(context.Background()); err != nil {
 		t.Fatalf("Login: %v", err)
 	}

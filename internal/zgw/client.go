@@ -93,16 +93,29 @@ func (c *Client) Login(ctx context.Context) error {
 		return fmt.Errorf("Anmeldung fehlgeschlagen (HTTP %d)", resp.StatusCode)
 	}
 
+	// Die OpenAPI-Spezifikation widerspricht sich hier: das Schema
+	// APIKeyResponse verschachtelt das Token unter "login", das Beispiel
+	// am Endpunkt zeigt es flach. Ein ZGW16WL-IP mit Firmware 2.x
+	// antwortet nachweislich verschachtelt. Wir lesen beide Formen, damit
+	// weder ein Firmwarestand noch eine spaetere Korrektur der Spec das
+	// Programm lahmlegt.
 	var out struct {
+		Login struct {
+			AccessToken string `json:"accessToken"`
+		} `json:"login"`
 		AccessToken string `json:"accessToken"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
 		return fmt.Errorf("Antwort der Anmeldung nicht lesbar: %v", err)
 	}
-	if out.AccessToken == "" {
+	token := out.Login.AccessToken
+	if token == "" {
+		token = out.AccessToken
+	}
+	if token == "" {
 		return errors.New("Anmeldung lieferte kein Zugangstoken")
 	}
-	c.setToken(out.AccessToken)
+	c.setToken(token)
 	return nil
 }
 

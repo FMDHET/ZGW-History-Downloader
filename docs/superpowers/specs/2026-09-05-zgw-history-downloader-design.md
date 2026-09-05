@@ -240,15 +240,38 @@ bettet den WebView2-Bootstrapper ein: fehlt die Runtime auf einem
 älteren Windows 10, bietet das Programm die Nachinstallation an, statt
 wortlos nicht zu starten. Auf Windows 11 ist die Runtime immer vorhanden.
 
-## Offene Punkte, am Gerät zu klären
+## Am Gerät geklärt
 
-**Skalierung.** Die Registertabelle nennt einen `scaling_factor`, etwa
-100. Das History-Beispiel der Spec liefert jedoch bereits `25.6`, also
-einen fertig skalierten Wert. Die Umsetzung rechnet deshalb **nicht**
-nach. Liegen die Werte am echten Gerät um den Faktor daneben, ist das
-sofort erkennbar und an einer Stelle korrigierbar.
+Geprüft am 2026-09-05 gegen ein ZGW16WL-IP mit Firmware **3.0.99-rc.1**,
+also deutlich neuer als die Spezifikation 2.4.1. Der Integrationstest
+`TestGegenEchtesGateway` hält den Ablauf fest.
 
-**Nicht aufgezeichnete Register.** Ob die API für ein Register ohne
-Aufzeichnung eine leere Liste oder einen Fehler liefert, sagt die Spec
-nicht. Das oben beschriebene Fehlerverhalten deckt beide Fälle ab, ohne
-dass die Antwort vorab bekannt sein muss.
+**Die Anmeldung antwortet verschachtelt.** Die Spec widerspricht sich:
+das Schema `APIKeyResponse` zeigt `{"login":{"accessToken":…}}`, das
+Beispiel am Endpunkt zeigt es flach. Das Gerät liefert die
+verschachtelte Form. Der Client liest beide.
+
+**Zeitstempel tragen den Zonenversatz ohne Doppelpunkt.** Das Gerät
+schreibt `2026-09-04T08:32:00+0200` und lässt Sekundenbruchteile weg;
+die Spec zeigt `2026-09-05T08:15:00.000+02:00`. `time.RFC3339` liest nur
+die zweite Form. Der Writer kennt deshalb beide Layouts — ohne das wäre
+jeder einzelne Messwert verworfen und keine Datei geschrieben worden.
+
+**Skalierung ist nicht nötig.** Register 30073 hat
+`scaling_factor: 100` und liefert `2290.06` kWh, also einen fertig
+skalierten Wert. Es wird nicht nachgerechnet.
+
+**Registerbeschreibungen sind ausschließlich englisch.** Von 198
+Registern über drei Zählertypen trägt keines einen `de`-Eintrag. Der
+Katalog fällt daher überall auf die englische Beschreibung zurück, und
+die Spaltenüberschriften lauten etwa `Total active power [Watt]`.
+
+**Nicht aufgezeichnete Register liefern eine leere Liste**, keinen
+Fehler. Von 80 Abrufen kamen 35 leer zurück — vor allem die Dreijahres-
+stufe, für die das Gerät noch keine Daten hat. Das gesammelte
+Fehlerverhalten deckt das ab.
+
+**Register desselben Zählers teilen sich die Zeitstempel nicht.** In den
+echten Daten fehlen einzelnen Registern Werte zu Zeitpunkten, an denen
+andere welche haben. Der Aufbau über die Vereinigungsmenge ist damit
+nicht Vorsicht, sondern Notwendigkeit.

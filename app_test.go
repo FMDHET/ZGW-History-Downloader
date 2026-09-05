@@ -26,7 +26,7 @@ func gatewayStub(t *testing.T) *httptest.Server {
 		id := r.URL.Query().Get("identifier")
 		switch {
 		case r.URL.Path == "/api/login":
-			io.WriteString(w, `{"accessToken":"TOKEN"}`)
+			io.WriteString(w, `{"login":{"accessToken":"TOKEN"}}`)
 		case r.URL.Path == "/api/devices/4/history" && id == "30053":
 			io.WriteString(w, `{"identifier":30053,"values":[
 				{"timestamp":"2026-09-05T08:00:00.000+02:00","value":1234.5},
