@@ -8,10 +8,10 @@ Zielrechner nötig.
 
 ## Benutzung
 
-`build\bin\zgwhistory.exe` starten.
+`zgwhistory.exe` starten.
 
-1. Adresse des Gateways (Vorgabe `zgw16-ip.local`, eine IP tut es auch)
-   und Passwort eingeben, *Verbinden*.
+1. Passwort eingeben, *Verbinden*. Die Adresse trägt das Programm in der
+   Regel selbst ein — siehe unten.
 2. Zähler, Register und Zeitstufen auswählen — alles ist vorausgewählt.
 3. Zielordner wählen und *Herunterladen*.
 
@@ -20,6 +20,51 @@ Je Zähler und Zeitstufe entsteht eine Datei
 
 Ein laufender Export lässt sich jederzeit abbrechen; bereits geschriebene
 Dateien bleiben liegen.
+
+## Das Gateway wird selbst gefunden
+
+Beim Start sucht das Programm per mDNS im lokalen Netz. Gefundene
+Gateways stehen im Adressfeld als Auswahlliste bereit, beschriftet mit
+**IP – mDNS-Name – Gerätename**:
+
+```
+192.168.177.218 - zgw16-ip.local - ZGW16WL-IP
+```
+
+Ausgewählt wird die IP-Adresse. Das Verbinden hängt damit nicht an der
+Namensauflösung, die je nach Netz und Windows-Einstellung unterschiedlich
+zuverlässig ist.
+
+Bei genau einem Fund trägt das Programm die Adresse selbst ein —
+allerdings nur, wenn dort noch die Vorgabe `zgw16-ip.local` steht. Eine
+von dir eingetragene und gemerkte Adresse wird nie überschrieben. Der
+Knopf *Suchen* wiederholt die Suche jederzeit.
+
+Findet die Suche nichts, sagt das Programm das und du trägst die Adresse
+von Hand ein. Das kommt vor, wenn im Netz Multicast gefiltert wird oder
+das Gateway in einem anderen Subnetz hängt; ein aktives VPN kann
+ebenfalls dazwischenfunken.
+
+### Warum die Suche nach Modell filtert
+
+ELTAKO-Geräte melden sich alle unter dem Dienst `_eltako._tcp.local` an,
+nicht nur Gateways. Im Testnetz antworten sechs Geräte auf die Anfrage:
+
+```
+  192.168.177.194 - EG-Wohnzimmer-ELTAKO-EUD64NPN-IPM
+  192.168.177.203 - EG-Küche-EUD64NPN-IPM
+* 192.168.177.218 - zgw16-ip.local - ZGW16WL-IP
+  192.168.177.241 - EG-Esszimmer-EUD64NPN-IPM
+  192.168.177.242 - DG-Bad-ESR64NP-IPM
+  192.168.177.249 - DG-Flur-ESR64NP-IPM
+```
+
+Angeboten wird nur, was im TXT-Feld `md` ein `ZGW16` trägt. Sonst
+stünden Dimmer und Schaltaktoren mit zur Auswahl.
+
+Gefragt wird über **jede** Netzwerkschnittstelle. Auf Rechnern mit
+virtuellen Adaptern (VMware, Hyper-V, WSL) geht eine Anfrage sonst in ein
+Netz ohne Geräte, und die Suche bleibt ohne Ergebnis.
 
 ## Zeitstufen — und was nicht geht
 
@@ -146,6 +191,13 @@ Zeitstufen und prüft, dass die Dateien echte Werte enthalten und nicht
 nur Überschriften. Mit `ZGW_OUT=C:\irgendwo` bleiben die erzeugten
 CSV-Dateien zum Ansehen liegen.
 
+Die mDNS-Suche lässt sich getrennt davon gegen das echte Netz prüfen:
+
+    ZGW_LIVE=1 go test ./internal/discover/ -run Echten -v
+
+Die Parsertests selbst brauchen kein Netz. Sie laufen gegen echte, im
+Netz aufgezeichnete Antwortpakete, die als Prüfdaten im Paket liegen.
+
 ## Aufbau
 
 | Pfad | Zweck |
@@ -153,9 +205,13 @@ CSV-Dateien zum Ansehen liegen.
 | `internal/zgw` | REST-Client, Anmeldung, Registerkatalog |
 | `internal/export` | CSV-Erzeugung und Dateinamen |
 | `internal/config` | Einstellungen und DPAPI |
+| `internal/discover` | mDNS-Suche nach Gateways |
 | `app.go` | Wails-Bindings und Export-Ablauf |
 | `frontend/` | Oberfläche |
 | `integration_test.go` | Test gegen echte Hardware |
+
+Ausser Wails hängt das Programm an keiner Fremdabhängigkeit; auch der
+mDNS-Teil bringt seinen eigenen kleinen DNS-Parser mit.
 
 `internal/zgw` und `internal/export` kennen weder Wails noch einander.
 Deshalb lässt sich die gesamte Fachlogik ohne GUI prüfen — der
