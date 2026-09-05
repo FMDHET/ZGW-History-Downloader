@@ -1,43 +1,212 @@
-import './style.css';
-import './app.css';
+import {
+  LoadSettings,
+  Connect,
+  ChooseFolder,
+  StartExport,
+  CancelExport,
+} from "../wailsjs/go/main/App";
+import { EventsOn } from "../wailsjs/runtime/runtime";
 
-import logo from './assets/images/logo-universal.png';
-import {Greet} from '../wailsjs/go/main/App';
+const $ = (id) => document.getElementById(id);
 
-document.querySelector('#app').innerHTML = `
-    <img id="logo" class="logo">
-      <div class="result" id="result">Please enter your name below 👇</div>
-      <div class="input-box" id="input">
-        <input class="input" id="name" type="text" autocomplete="off" />
-        <button class="btn" onclick="greet()">Greet</button>
-      </div>
-    </div>
-`;
-document.getElementById('logo').src = logo;
+// Beschriftung der vier Zeitstufen, die die API kennt.
+const TIMEFRAMES = [
+  { days: 1, label: "1 Tag — 15-Minuten-Werte" },
+  { days: 14, label: "14 Tage — Tageswerte" },
+  { days: 365, label: "1 Jahr — Monatswerte" },
+  { days: 1095, label: "3 Jahre — Jahreswerte" },
+];
 
-let nameElement = document.getElementById("name");
-nameElement.focus();
-let resultElement = document.getElementById("result");
+let meters = [];
+let exporting = false;
 
-// Setup the greet function
-window.greet = function () {
-    // Get name
-    let name = nameElement.value;
+function log(message, level = "info") {
+  const line = document.createElement("span");
+  line.className = level;
+  line.textContent = message + "\n";
+  $("log").appendChild(line);
+  $("log").scrollTop = $("log").scrollHeight;
+}
 
-    // Check if the input is empty
-    if (name === "") return;
+function setState(text, kind = "") {
+  const el = $("connection-state");
+  el.textContent = text;
+  el.className = "state " + kind;
+}
 
-    // Call App.Greet(name)
-    try {
-        Greet(name)
-            .then((result) => {
-                // Update result with data back from App.Greet()
-                resultElement.innerText = result;
-            })
-            .catch((err) => {
-                console.error(err);
-            });
-    } catch (err) {
-        console.error(err);
+function renderTimeframes(selected) {
+  $("timeframes").innerHTML = "";
+  for (const tf of TIMEFRAMES) {
+    const label = document.createElement("label");
+    label.className = "inline";
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.dataset.days = String(tf.days);
+    box.checked = selected.includes(tf.days);
+    label.append(box, document.createTextNode(" " + tf.label));
+    $("timeframes").appendChild(label);
+  }
+}
+
+function renderMeters() {
+  const host = $("meters");
+  host.innerHTML = "";
+  for (const m of meters) {
+    const details = document.createElement("details");
+    details.className = "meter";
+    details.open = true;
+
+    const summary = document.createElement("summary");
+    const box = document.createElement("input");
+    box.type = "checkbox";
+    box.checked = true;
+    box.dataset.meter = String(m.busAddress);
+    box.addEventListener("click", (e) => e.stopPropagation());
+    box.addEventListener("change", () => {
+      details
+        .querySelectorAll("input[data-register]")
+        .forEach((r) => (r.checked = box.checked));
+    });
+    summary.append(
+      box,
+      document.createTextNode(` Adresse ${m.busAddress} · ${m.name} `)
+    );
+    const type = document.createElement("span");
+    type.className = "type";
+    type.textContent = `(${m.typeName})`;
+    summary.appendChild(type);
+    details.appendChild(summary);
+
+    const list = document.createElement("div");
+    list.className = "registers";
+    for (const r of m.registers || []) {
+      const label = document.createElement("label");
+      label.className = "inline";
+      const rb = document.createElement("input");
+      rb.type = "checkbox";
+      rb.checked = true;
+      rb.dataset.register = String(r.number);
+      rb.dataset.meter = String(m.busAddress);
+      const unit = r.unit ? ` [${r.unit}]` : "";
+      label.append(rb, document.createTextNode(` ${r.name}${unit}`));
+      list.appendChild(label);
     }
-};
+    if (!(m.registers || []).length) {
+      const empty = document.createElement("span");
+      empty.className = "hint";
+      empty.textContent = "Für diesen Zähler zeichnet das Gateway nichts auf.";
+      list.appendChild(empty);
+    }
+    details.appendChild(list);
+    host.appendChild(details);
+  }
+}
+
+function collectRequest() {
+  const selection = [];
+  for (const m of meters) {
+    const registers = [
+      ...document.querySelectorAll(
+        `input[data-register][data-meter="${m.busAddress}"]:checked`
+      ),
+    ].map((el) => Number(el.dataset.register));
+    if (registers.length) {
+      selection.push({ busAddress: m.busAddress, registers });
+    }
+  }
+  const timeFrames = [
+    ...document.querySelectorAll("#timeframes input:checked"),
+  ].map((el) => Number(el.dataset.days));
+
+  return { meters: selection, timeFrames, outputDir: $("outdir").value };
+}
+
+function setExporting(active) {
+  exporting = active;
+  $("download").textContent = active ? "Abbrechen" : "Herunterladen";
+  $("connect").disabled = active;
+  $("browse").disabled = active;
+}
+
+async function connect() {
+  $("connect").disabled = true;
+  setState("Verbinde …");
+  try {
+    const res = await Connect(
+      $("host").value,
+      $("password").value,
+      $("remember").checked
+    );
+    meters = res.meters || [];
+    setState(`Verbunden mit ${res.gateway} · ${meters.length} Zähler`, "ok");
+    renderMeters();
+    $("selection-card").hidden = false;
+    $("export-card").hidden = false;
+  } catch (err) {
+    meters = [];
+    $("selection-card").hidden = true;
+    $("export-card").hidden = true;
+    setState(String(err), "error");
+  } finally {
+    $("connect").disabled = false;
+  }
+}
+
+async function browse() {
+  try {
+    const dir = await ChooseFolder();
+    if (dir) $("outdir").value = dir;
+  } catch (err) {
+    log(String(err), "error");
+  }
+}
+
+async function download() {
+  if (exporting) {
+    CancelExport();
+    return;
+  }
+  const req = collectRequest();
+  if (!req.meters.length) return log("Kein Register ausgewählt.", "warn");
+  if (!req.timeFrames.length) return log("Kein Zeitraum ausgewählt.", "warn");
+  if (!req.outputDir) return log("Kein Zielordner gewählt.", "warn");
+
+  $("log").innerHTML = "";
+  $("progress").value = 0;
+  setExporting(true);
+  try {
+    await StartExport(req);
+  } catch (err) {
+    log(String(err), "error");
+    setExporting(false);
+  }
+}
+
+EventsOn("export:progress", (p) => {
+  $("progress").max = p.total || 1;
+  $("progress").value = p.done || 0;
+  $("progress-text").textContent = `${p.done}/${p.total} · ${p.message}`;
+});
+
+EventsOn("export:log", (l) => log(l.message, l.level));
+
+EventsOn("export:done", (s) => {
+  setExporting(false);
+  $("progress-text").textContent = s.message;
+  log(s.message, s.failed > 0 ? "warn" : "info");
+});
+
+$("connect").addEventListener("click", connect);
+$("browse").addEventListener("click", browse);
+$("download").addEventListener("click", download);
+$("password").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") connect();
+});
+
+LoadSettings().then((s) => {
+  $("host").value = s.host || "zgw16-ip.local";
+  $("password").value = s.password || "";
+  $("remember").checked = !!s.remember;
+  $("outdir").value = s.outputDir || "";
+  renderTimeframes([1]);
+});

@@ -1,12 +1,53 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>zgwhistory</title>
-</head>
-<body>
-<div id="app"></div>
-<script src="./src/main.js" type="module"></script>
-</body>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ZGW History Downloader</title>
+    <link rel="stylesheet" href="./src/style.css" />
+  </head>
+  <body>
+    <main>
+      <section class="card">
+        <h2>1 · Verbindung</h2>
+        <div class="grid">
+          <label for="host">Adresse des Gateways</label>
+          <input id="host" type="text" placeholder="zgw16-ip.local" />
+          <label for="password">Passwort</label>
+          <input id="password" type="password" />
+          <span></span>
+          <label class="inline"><input id="remember" type="checkbox" /> Passwort merken</label>
+        </div>
+        <div class="actions">
+          <button id="connect" class="primary">Verbinden</button>
+          <span id="connection-state" class="state"></span>
+        </div>
+      </section>
+
+      <section class="card" id="selection-card" hidden>
+        <h2>2 · Auswahl</h2>
+        <div id="meters"></div>
+        <h3>Zeitraum</h3>
+        <p class="hint">
+          Das Gateway kennt nur diese vier Stufen. Je Stufe und Zähler entsteht eine eigene Datei.
+        </p>
+        <div id="timeframes" class="timeframes"></div>
+      </section>
+
+      <section class="card" id="export-card" hidden>
+        <h2>3 · Export</h2>
+        <div class="actions">
+          <input id="outdir" type="text" readonly placeholder="Kein Zielordner gewählt" />
+          <button id="browse">Durchsuchen …</button>
+        </div>
+        <div class="actions">
+          <button id="download" class="primary">Herunterladen</button>
+          <span id="progress-text" class="state"></span>
+        </div>
+        <progress id="progress" value="0" max="1"></progress>
+        <pre id="log" aria-live="polite"></pre>
+      </section>
+    </main>
+    <script type="module" src="./src/main.js"></script>
+  </body>
 </html>

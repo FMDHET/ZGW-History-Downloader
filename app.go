@@ -57,6 +57,11 @@ type Summary struct {
 type App struct {
 	ctx context.Context
 
+	// emit schickt ein Ereignis an die Oberflaeche. Im Betrieb ist das
+	// der Wails-Emitter; Tests setzen hier eine eigene Funktion ein und
+	// koennen den Export dadurch ohne laufende GUI pruefen.
+	emit func(name string, data any)
+
 	mu      sync.Mutex
 	client  *zgw.Client
 	meters  []zgw.MeterInfo
@@ -65,7 +70,11 @@ type App struct {
 }
 
 func NewApp() *App {
-	return &App{}
+	a := &App{}
+	a.emit = func(name string, data any) {
+		wailsruntime.EventsEmit(a.ctx, name, data)
+	}
+	return a
 }
 
 func (a *App) startup(ctx context.Context) {
@@ -304,17 +313,17 @@ func (a *App) runExport(ctx context.Context, client *zgw.Client, meters []zgw.Me
 }
 
 func (a *App) progress(done, total int, message string) {
-	wailsruntime.EventsEmit(a.ctx, "export:progress", map[string]any{
+	a.emit("export:progress", map[string]any{
 		"done": done, "total": total, "message": message,
 	})
 }
 
 func (a *App) logLine(level, message string) {
-	wailsruntime.EventsEmit(a.ctx, "export:log", map[string]any{
+	a.emit("export:log", map[string]any{
 		"level": level, "message": message,
 	})
 }
 
 func (a *App) finish(s Summary) {
-	wailsruntime.EventsEmit(a.ctx, "export:done", s)
+	a.emit("export:done", s)
 }
