@@ -155,3 +155,46 @@ func (c *Client) System(ctx context.Context) (SystemInfo, error) {
 	err := c.get(ctx, "/system", &info)
 	return info, err
 }
+
+// ValidTimeFrames sind die vier Zeitstufen, die das Geraet kennt.
+// 1 Tag in 15-Minuten-Schritten, 14 Tage taeglich, 365 Tage monatlich,
+// 1095 Tage jaehrlich.
+var ValidTimeFrames = []int{1, 14, 365, 1095}
+
+func validTimeFrame(tf int) bool {
+	for _, v := range ValidTimeFrames {
+		if v == tf {
+			return true
+		}
+	}
+	return false
+}
+
+// Devices liefert alle am Gateway bekannten Zaehler.
+func (c *Client) Devices(ctx context.Context) ([]Device, error) {
+	var out devicesResponse
+	if err := c.get(ctx, "/devices", &out); err != nil {
+		return nil, err
+	}
+	return out.Devices, nil
+}
+
+// DeviceTypes liefert die Registertabellen aller bekannten Zaehlertypen.
+func (c *Client) DeviceTypes(ctx context.Context) ([]DeviceType, error) {
+	var out deviceTypesResponse
+	if err := c.get(ctx, "/devices/types", &out); err != nil {
+		return nil, err
+	}
+	return out.DeviceTypes, nil
+}
+
+// History liefert die aufgezeichneten Werte eines Registers.
+func (c *Client) History(ctx context.Context, busAddress, register, timeFrame int) (History, error) {
+	var out History
+	if !validTimeFrame(timeFrame) {
+		return out, fmt.Errorf("unzulaessiger Zeitraum %d Tage", timeFrame)
+	}
+	path := fmt.Sprintf("/devices/%d/history?identifier=%d&timeFrame=%d", busAddress, register, timeFrame)
+	err := c.get(ctx, path, &out)
+	return out, err
+}
